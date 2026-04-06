@@ -1,0 +1,219 @@
+library(tidyverse)
+music <- read.csv("spotifydataset.csv", stringsAsFactors = FALSE)
+names(music)
+head(music)
+
+
+# Cleaning the data
+
+music <- music %>%
+  select(track_name, artist_name, release_date, genres)
+
+# Rename columns to make them easier to use
+music <- music %>%
+  rename(
+    song = track_name,
+    artist = artist_name,
+    genre = genres
+  )
+
+# Extract the year from the release date
+music$year <- as.numeric(substr(music$release_date, 1, 4))
+
+# Remove missing values
+music <- na.omit(music)
+
+# See the cleaned data
+head(music)
+
+
+# Decades
+music$decade <- cut(
+  music$year,
+  breaks = c(1969, 1979, 1989, 1999, 2009, 2019, 2029),
+  labels = c("1970s", "1980s", "1990s",
+             "2000s", "2010s", "2020s")
+)
+
+table(music$decade)
+
+
+
+
+# Load libraries
+library(dplyr)
+library(ggplot2)
+library(lubridate)
+
+# -------------------------------
+#  Normalize genres
+# -------------------------------
+music$genre_group <- case_when(
+  # Missing or unknown
+  is.na(music$genre) | music$genre == "" ~ "Unknown",
+  
+  # Popular genres
+  grepl("hip hop|rap|trap|drill|gangster rap|melodic rap", music$genre, ignore.case = TRUE) ~ "Hip-Hop/Rap",
+  grepl("pop|dance pop|viral pop|social media pop|post-teen pop", music$genre, ignore.case = TRUE) ~ "Pop",
+  grepl("rock|metal|punk|grunge|hard rock|alternative rock", music$genre, ignore.case = TRUE) ~ "Rock/Metal",
+  grepl("country|country pop|contemporary country", music$genre, ignore.case = TRUE) ~ "Country",
+  
+  # Other notable genres
+  grepl("latin|reggaeton|urbano|bachata|dembow", music$genre, ignore.case = TRUE) ~ "Latin",
+  grepl("r&b|soul|neo soul|contemporary r&b", music$genre, ignore.case = TRUE) ~ "R&B/Soul",
+  grepl("electro|edm|dance|house|trance|techno", music$genre, ignore.case = TRUE) ~ "Electronic",
+  grepl("indie|folk|singer-songwriter|neo mellow", music$genre, ignore.case = TRUE) ~ "Indie/Folk",
+  
+  # Smaller categories
+  grepl("k-pop|k-rap", music$genre, ignore.case = TRUE) ~ "K-Pop/K-Rap",
+  grepl("classical|baroque|classical era|early music", music$genre, ignore.case = TRUE) ~ "Classical",
+  grepl("afrobeats|afrobeat|nigerian pop", music$genre, ignore.case = TRUE) ~ "Afrobeats",
+  grepl("jazz|blues", music$genre, ignore.case = TRUE) ~ "Jazz/Blues",
+  grepl("reggae", music$genre, ignore.case = TRUE) ~ "Reggae",
+  grepl("ambient|new age", music$genre, ignore.case = TRUE) ~ "Ambient",
+  
+  # Catch-all
+  TRUE ~ "Other"
+)
+
+# -------------------------------
+#  Merge very small groups into "Other"
+# -------------------------------
+counts <- prop.table(table(music$genre_group))
+small_groups <- names(counts[counts < 0.02 & names(counts) != "Other"])
+music$genre_group <- ifelse(music$genre_group %in% small_groups, "Other", music$genre_group)
+
+# Check final proportions
+prop.table(table(music$genre_group))
+
+# -------------------------------
+#  Sampling
+# -------------------------------
+
+set.seed(123)
+
+# Simple Random Sample (SRS)
+srs_sample <- music %>% sample_n(200)
+prop.table(table(srs_sample$genre_group))
+
+# Stratified sample: 10% from each group
+strat_sample <- music %>%
+  group_by(genre_group) %>%
+  sample_frac(0.1)
+prop.table(table(strat_sample$genre_group))
+
+# Ratio sample: fixed number per group (20 per group)
+ratio_sample <- music %>%
+  group_by(genre_group) %>%
+  sample_n(20, replace = TRUE)  # replace if not enough
+prop.table(table(ratio_sample$genre_group))
+
+# -------------------------------
+#  Compute sample errors
+# -------------------------------
+
+# Population proportions
+pop_prop <- prop.table(table(music$genre_group))
+
+# SRS errors
+srs_error <- prop.table(table(srs_sample$genre_group)) - pop_prop[names(prop.table(table(srs_sample$genre_group)))]
+srs_error
+
+# Stratified errors
+strat_error <- prop.table(table(strat_sample$genre_group)) - pop_prop[names(prop.table(table(strat_sample$genre_group)))]
+strat_error
+
+# -------------------------------
+#  Plot genre trends over time
+# -------------------------------
+
+# Convert release_date to Date if needed
+music$release_date <- as.Date(music$release_date)
+
+# Music Genre Popularity over time
+music %>%
+  filter(!is.na(release_date)) %>%
+  group_by(year = year(release_date), genre_group) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  ggplot(aes(x = year, y = count, color = genre_group)) +
+  geom_line(size = 1) +
+  theme_minimal() +
+  labs(title = "Music Genre Popularity Over Time",
+       x = "Year",
+       y = "Number of Songs")
+
+
+# Population vs SRS sample
+pop_df <- data.frame(
+  genre_group = names(pop_prop),
+  Population = as.numeric(pop_prop)
+)
+
+srs_df <- data.frame(
+  genre_group = names(prop.table(table(srs_sample$genre_group))),
+  SRS_Sample = as.numeric(prop.table(table(srs_sample$genre_group)))
+)
+
+library(tidyr)
+plot_df <- left_join(pop_df, srs_df, by = c("genre_group")) %>%
+  pivot_longer(cols = c("Population", "SRS_Sample"), names_to = "Type", values_to = "Proportion")
+
+ggplot(plot_df, aes(x = genre_group, y = Proportion, fill = Type)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  theme_minimal() +
+  labs(title = "Population vs SRS Sample Genre Proportions",
+       x = "Genre Group",
+       y = "Proportion") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+
+
+# Genre Trends over time
+music %>%
+  filter(!is.na(release_date)) %>%
+  group_by(year = year(release_date), genre_group) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  group_by(year) %>%
+  mutate(prop = count / sum(count)) %>%
+  ggplot(aes(x = year, y = prop, fill = genre_group)) +
+  geom_area(alpha = 0.8) +
+  theme_minimal() +
+  labs(title = "Proportion of Music Genres Over Time",
+       x = "Year",
+       y = "Proportion")
+
+#SRS vs Stratified
+# Prepare proportions per genre
+srs_props <- prop.table(table(srs_sample$genre_group))
+strat_props <- prop.table(table(strat_sample$genre_group))
+
+comp_df <- data.frame(
+  Genre = rep(names(srs_props), 2),
+  Proportion = c(as.numeric(srs_props), as.numeric(strat_props)),
+  SampleType = rep(c("SRS", "Stratified"), each = length(srs_props))
+)
+
+ggplot(comp_df, aes(x = Genre, y = Proportion, fill = SampleType)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  theme_minimal() +
+  labs(title = "Comparison of SRS vs Stratified Sampling Proportions",
+       x = "Genre Group",
+       y = "Proportion") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Top Genres Per Decade
+music %>%
+  filter(!is.na(release_date)) %>%
+  mutate(decade = floor(year(release_date)/10)*10) %>%
+  group_by(decade, genre_group) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  group_by(decade) %>%
+  top_n(3, count) %>%
+  ggplot(aes(x = factor(decade), y = count, fill = genre_group)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  theme_minimal() +
+  labs(title = "Top 3 Genres per Decade",
+       x = "Decade",
+       y = "Number of Songs")
+
