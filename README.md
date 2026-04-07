@@ -113,7 +113,7 @@ Minor genres, although individually sparse, collectively contribute to diversity
 Across all figures, the central pattern is a time-based genre shift and concentration: recent years contain many more songs and are dominated by Pop, with Hip-Hop/Rap as the second strongest growth genre. Sampling comparisons show that while simple random sampling captures broad structure, stratified sampling provides a more stable representation. Decade-level results reinforce the long-run transition from earlier Rock/Metal prominence to modern Pop and Hip-Hop/Rap dominance.
 
 
-6. References
+## 6. References
 
 Kaggle: Spotify Songs and Artists Dataset | Audio Features:
 https://www.kaggle.com/datasets/glowstudygram/spotify-songs-and-artists-dataset
