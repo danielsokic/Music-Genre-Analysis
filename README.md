@@ -1,7 +1,5 @@
 # Music Genre Popularity Over Time: Sampling and Survey Analysis
 
-Gtihub Repo: https://github.com/danielsokic/Music-Genre-Analysis
-
 ## 1. Introduction
 
 The evolution of popular music genres reflects changes in cultural trends, technological innovation, and consumer behavior. Over the last few decades, the music industry has experienced dramatic growth in digital distribution and streaming, which has allowed certain genres to rise rapidly in visibility. This study analyzes a dataset of top-charting songs with genre, year, and other metadata, with the goal of quantifying trends and evaluating sampling strategies in representing the population distribution of genres.
