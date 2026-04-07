@@ -23,7 +23,7 @@ The dataset contained song-level metadata including year, genre, artist, and pop
 - **Stratified Sampling:** proportional sampling within each genre group to preserve population proportions, particularly for smaller genres.
 
 	
-## 2.3 Data Analysis and Visualization
+### 2.3 Data Analysis and Visualization
 
 - **Temporal trends**: line and area charts to capture yearly changes.
 - **Distributional comparisons**: bar charts to evaluate SRS vs stratified representation.
